@@ -1,0 +1,36 @@
+# Codecov configuration file
+# https://docs.codecov.com/docs/codecov-yaml
+
+coverage:
+  precision: 2
+  round: down
+  range: "0...100"
+
+  status:
+    project:
+      default:
+        target: 0%
+        threshold: 0%
+        if_ci_failed: error
+
+    patch:
+      default:
+        target: 0%
+        threshold: 0%
+        if_ci_failed: error
+
+comment:
+  layout: "reach,diff,flags,tree,files"
+  behavior: default
+  require_changes: false
+  require_base: false
+  require_head: true
+
+# Ignore generated files and test files for coverage calculation
+ignore:
+  - "**/*_test.go"
+  - "**/zz_generated.*.go"
+  - "mocks/**/*"
+  - "test/**/*"
+  - "scripts/**/*"
+  - "hack/**/*"

@@ -2,6 +2,7 @@
 
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/aws/amazon-vpc-resource-controller-k8s)
 [![Go Report Card](https://goreportcard.com/badge/github.com/aws/amazon-vpc-resource-controller-k8s)](https://goreportcard.com/report/github.com/aws/amazon-vpc-resource-controller-k8s)
+[![codecov](https://codecov.io/gh/tzifudzi/amazon-vpc-resource-controller-k8s/branch/master/graph/badge.svg)](https://codecov.io/gh/tzifudzi/amazon-vpc-resource-controller-k8s)
 ![GitHub](https://img.shields.io/github/license/aws/amazon-vpc-resource-controller-k8s?style=flat)
 
 ## Usage
