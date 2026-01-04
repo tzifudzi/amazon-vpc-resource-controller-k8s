@@ -23,6 +23,39 @@ help: ## Display help
 ## Execute before submitting code
 presubmit: verify test
 
+##@ CI Targets for Cloud Agents
+
+## Run all CI checks - format, lint, build, test (fail-fast, sequential)
+ci: ci-format ci-lint ci-build ci-test ## Run all CI validation checks
+
+## Check code formatting without auto-fixing
+ci-format: ## Verify code formatting
+	@echo "==> Checking code formatting..."
+	@if [ -n "$$(gofmt -l .)" ]; then \
+		echo "ERROR: The following files are not formatted correctly:"; \
+		gofmt -l .; \
+		exit 1; \
+	fi
+	@echo "==> Format check passed"
+
+## Run linting checks
+ci-lint: ## Run go vet linting
+	@echo "==> Running lint checks..."
+	go vet ./...
+	@echo "==> Lint check passed"
+
+## Verify code compiles
+ci-build: ## Verify code compiles
+	@echo "==> Verifying code compiles..."
+	go build -o /dev/null ./...
+	@echo "==> Build check passed"
+
+## Run unit tests
+ci-test: ## Run unit tests with race detection
+	@echo "==> Running unit tests..."
+	go test -race ./pkg/... ./controllers/... ./webhooks/... -coverprofile cover.out
+	@echo "==> Unit tests passed"
+
 ## Verify dependencies, correctness, and formatting
 verify:
 	go mod tidy
