@@ -1,0 +1,241 @@
+From 5c7f8e9f4d53c3d6117975c07ad683581d8c5bca Mon Sep 17 00:00:00 2001
+From: Roo Code <roomote@roocode.com>
+Date: Sun, 4 Jan 2026 06:08:25 +0000
+Subject: [PATCH 1/2] feat: add PR validation workflow using Makefile CI
+ targets
+
+---
+ .github/workflows/pr-validation.yaml | 127 +++++++++++++++++++++++++++
+ 1 file changed, 127 insertions(+)
+ create mode 100644 .github/workflows/pr-validation.yaml
+
+diff --git a/.github/workflows/pr-validation.yaml b/.github/workflows/pr-validation.yaml
+new file mode 100644
+index 0000000..44f79b1
+--- /dev/null
++++ b/.github/workflows/pr-validation.yaml
+@@ -0,0 +1,127 @@
++name: PR Validation
++on:
++  pull_request:
++    branches: [master, main]
++  workflow_dispatch:
++
++permissions:
++  contents: read
++  pull-requests: read
++
++jobs:
++  format-check:
++    name: Format Check
++    runs-on: ubuntu-latest
++    steps:
++      - name: Checkout code
++        uses: actions/checkout@v3
++      
++      - name: Setup Go
++        uses: actions/setup-go@v4
++        with:
++          go-version-file: go.mod
++          check-latest: true
++          cache-dependency-path: "**/go.sum"
++      
++      - name: Check code formatting
++        run: make ci-format
++
++  lint:
++    name: Lint
++    runs-on: ubuntu-latest
++    steps:
++      - name: Checkout code
++        uses: actions/checkout@v3
++      
++      - name: Setup Go
++        uses: actions/setup-go@v4
++        with:
++          go-version-file: go.mod
++          check-latest: true
++          cache-dependency-path: "**/go.sum"
++      
++      - name: Run linting
++        run: make ci-lint
++
++  build:
++    name: Build
++    runs-on: ubuntu-latest
++    steps:
++      - name: Checkout code
++        uses: actions/checkout@v3
++      
++      - name: Setup Go
++        uses: actions/setup-go@v4
++        with:
++          go-version-file: go.mod
++          check-latest: true
++          cache-dependency-path: "**/go.sum"
++      
++      - name: Verify code compiles
++        run: make ci-build
++
++  test:
++    name: Unit Tests
++    runs-on: ubuntu-latest
++    steps:
++      - name: Checkout code
++        uses: actions/checkout@v3
++      
++      - name: Setup Go
++        uses: actions/setup-go@v4
++        with:
++          go-version-file: go.mod
++          check-latest: true
++          cache-dependency-path: "**/go.sum"
++      
++      - name: Run unit tests
++        run: make ci-test
++      
++      - name: Upload coverage report
++        uses: actions/upload-artifact@v3
++        if: always()
++        with:
++          name: coverage-report
++          path: cover.out
++
++  ci-all:
++    name: Full CI Validation
++    runs-on: ubuntu-latest
++    steps:
++      - name: Checkout code
++        uses: actions/checkout@v3
++      
++      - name: Setup Go
++        uses: actions/setup-go@v4
++        with:
++          go-version-file: go.mod
++          check-latest: true
++          cache-dependency-path: "**/go.sum"
++      
++      - name: Run all CI checks
++        run: make ci
++
++  validation-summary:
++    name: Validation Summary
++    runs-on: ubuntu-latest
++    needs: [format-check, lint, build, test, ci-all]
++    if: always()
++    steps:
++      - name: Check validation results
++        run: |
++          echo "==> PR Validation Summary"
++          echo "Format Check: ${{ needs.format-check.result }}"
++          echo "Lint: ${{ needs.lint.result }}"
++          echo "Build: ${{ needs.build.result }}"
++          echo "Test: ${{ needs.test.result }}"
++          echo "Full CI: ${{ needs.ci-all.result }}"
++          
++          if [ "${{ needs.format-check.result }}" != "success" ] || \
++             [ "${{ needs.lint.result }}" != "success" ] || \
++             [ "${{ needs.build.result }}" != "success" ] || \
++             [ "${{ needs.test.result }}" != "success" ] || \
++             [ "${{ needs.ci-all.result }}" != "success" ]; then
++            echo "==> ❌ PR validation failed"
++            exit 1
++          fi
++          echo "==> ✅ PR validation passed"
+-- 
+2.50.1
+
+
+From 4e7094f9dfb097f5ef90d49a09d6203e47f52916 Mon Sep 17 00:00:00 2001
+From: Roo Code <roomote@roocode.com>
+Date: Sun, 4 Jan 2026 06:09:03 +0000
+Subject: [PATCH 2/2] docs: add PR validation workflow documentation
+
+---
+ PR_VALIDATION_WORKFLOW.md | 74 +++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 74 insertions(+)
+ create mode 100644 PR_VALIDATION_WORKFLOW.md
+
+diff --git a/PR_VALIDATION_WORKFLOW.md b/PR_VALIDATION_WORKFLOW.md
+new file mode 100644
+index 0000000..dfe1d08
+--- /dev/null
++++ b/PR_VALIDATION_WORKFLOW.md
+@@ -0,0 +1,74 @@
++# PR Validation Workflow
++
++This document describes the new PR validation workflow that has been added to the repository.
++
++## Overview
++
++A new GitHub Actions workflow file has been created at `.github/workflows/pr-validation.yaml` that uses the Makefile CI targets to validate pull requests.
++
++## Workflow Features
++
++The PR validation workflow includes the following jobs:
++
++### 1. Format Check (`format-check`)
++- Runs `make ci-format` to verify code formatting
++- Ensures all Go code follows standard formatting guidelines
++
++### 2. Lint (`lint`)
++- Runs `make ci-lint` to perform static code analysis
++- Executes `go vet` to catch common errors
++
++### 3. Build (`build`)
++- Runs `make ci-build` to verify code compiles
++- Ensures all code builds successfully without errors
++
++### 4. Unit Tests (`test`)
++- Runs `make ci-test` to execute unit tests with race detection
++- Generates code coverage reports
++- Uploads coverage artifacts for review
++
++### 5. Full CI Validation (`ci-all`)
++- Runs `make ci` which executes all CI checks sequentially
++- Provides a comprehensive validation in a single job
++
++### 6. Validation Summary (`validation-summary`)
++- Aggregates results from all previous jobs
++- Provides a clear pass/fail summary
++- Fails if any validation step fails
++
++## Trigger Conditions
++
++The workflow is triggered on:
++- Pull requests targeting `master` or `main` branches
++- Manual workflow dispatch
++
++## Makefile CI Targets Used
++
++The workflow leverages the following Makefile targets:
++
++- `ci-format`: Check code formatting without auto-fixing
++- `ci-lint`: Run go vet linting
++- `ci-build`: Verify code compiles
++- `ci-test`: Run unit tests with race detection
++- `ci`: Run all CI validation checks (fail-fast, sequential)
++
++## Benefits
++
++1. **Parallel Execution**: Most validation jobs run in parallel for faster feedback
++2. **Early Failure Detection**: Catches issues before code review
++3. **Comprehensive Validation**: Multiple validation layers ensure code quality
++4. **Clear Feedback**: Validation summary provides clear pass/fail status
++5. **Makefile Integration**: Uses existing Makefile targets for consistency
++
++## Implementation Status
++
++The workflow file has been created and committed to the branch `feature/add-pr-validation-workflow`.
++
++Due to GitHub App permission restrictions, the workflow file needs to be manually pushed or the PR needs to be created through the GitHub web interface.
++
++## Next Steps
++
++1. Push the workflow file to the remote repository (requires `workflows` permission)
++2. Create a pull request to merge the changes
++3. Review and test the workflow in action
++4. Adjust workflow parameters as needed based on feedback
+-- 
+2.50.1
+
